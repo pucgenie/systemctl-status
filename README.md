@@ -6,7 +6,7 @@ May need libdbus-java (can be found using apt)
 ## `./gradlew run`
 is one of the possible commands to run it.
 
-## `/gradlew bootJar`
+## `./gradlew bootJar`
 creates a full package in `./build/libs/`
 
 ### Reference Documentation

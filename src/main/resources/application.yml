@@ -2,3 +2,10 @@
 server:
   port: 59080
   address: 127.0.0.1
+  tomcat:
+    threads:
+      max: 1
+    accept-count: 4
+    #min-spare-threads: 0
+    max-swallow-size: 1KB
+  max-http-header-size: 1KB
