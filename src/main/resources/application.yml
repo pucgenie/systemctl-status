@@ -1,0 +1,4 @@
+---
+server:
+  port: 59080
+  address: 127.0.0.1
