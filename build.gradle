@@ -19,11 +19,17 @@ dependencies {
 	}
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	implementation 'com.github.thjomnx:java-systemd'
+	// doesn't exist
+	//implementation 'com.github.thjomnx:dbus-java'
+	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	
 	// version 3.3.0 is in fact semantic version 4.x breaking compatibility
 	//implementation 'com.github.hypfvieh:dbus-java:3.2.4'
+	
+	// causes warnings
+	//implementation 'com.github.hypfvieh:libmatthew'
 	
 	// doesn't work for me
 	//implementation 'com.github.bdeneuter:dbus-java:2.7'
