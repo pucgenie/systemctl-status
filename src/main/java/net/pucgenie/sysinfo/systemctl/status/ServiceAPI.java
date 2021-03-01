@@ -1,34 +1,41 @@
 package net.pucgenie.sysinfo.systemctl.status;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.WeakHashMap;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.freedesktop.dbus.DBusConnection;
+import org.freedesktop.dbus.Variant;
 import org.freedesktop.dbus.exceptions.DBusException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.WebRequest;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonIncludeProperties;
+
+import de.thjom.java.systemd.Service;
 import de.thjom.java.systemd.Systemd;
+import de.thjom.java.systemd.Unit;
+import de.thjom.java.systemd.Unit.Property;
+import de.thjom.java.systemd.interfaces.ServiceInterface;
+import lombok.NoArgsConstructor;
 
-@RestController
+@org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = "/service")
-public class Service {
+@org.springframework.web.bind.annotation.CrossOrigin
+@lombok.extern.slf4j.Slf4j
+public class ServiceAPI {
 
-	protected Duration waitBeforeRefresh = Duration.ofSeconds(60);
+	protected final Duration waitBeforeRefresh = Duration.ofSeconds(20);
 	/**
 	 * String is a good candidate for Hash collections, isn't it?
 	 * Using Weak implementation as a last-resort memory-capping barrier.
@@ -37,9 +44,16 @@ public class Service {
 
 	@lombok.Data
 	// @lombok.EqualsAndHashCode //all instances are unique
+	@JsonIncludeProperties({"subStatus",})
 	public class ServiceData {
+		
+		//@JsonInclude
 		protected String subStatus;
+		
 		protected long lastRefresh = System.currentTimeMillis() - waitBeforeRefresh.toMillis();
+		
+		protected Service service;
+		
 	}
 	
 	/**
@@ -67,6 +81,13 @@ public class Service {
 			if (serviceData == null) {
 				cachedStatus.put(servicename, serviceData = new ServiceData());
 			}
+			
+			final var safeName = servicename + ".service";
+			var service = serviceData.getService();
+			if (service == null) {
+				serviceData.setService(service = Systemd.get().getManager().getService(safeName));
+			}
+			final var unitProps = service.getUnitProperties();
 			final long now = System.currentTimeMillis();
 			boolean needsRefresh = now >= serviceData.lastRefresh + waitBeforeRefresh.toMillis();
 			if (!needsRefresh && RequestMethod.HEAD.name().equals(req.getMethod()) //
@@ -76,19 +97,25 @@ public class Service {
 						.build();
 			}
 			if (needsRefresh) {
+				// provoke NPE just in case
 				try {
-					// evtl. loadUnit verwenden
 					serviceData
-							.setSubStatus(Systemd.get().getManager().getUnit(servicename + ".service").getSubState());
+							.setSubStatus(unitProps.getString(Property.SUB_STATE));
 					serviceData.lastRefresh = now;
-				} catch (DBusException e) {
-//				return ResponseEntity.unprocessableEntity()
-//						.cacheControl(CacheControl.noCache())
-//						.body(e);
-					throw e;
+				} catch (RuntimeException dex) {
+					if (Boolean.TRUE.equals(req.getAttribute("DBusConnection_was_reset"))) {
+						// prevent from endless recursion
+						throw dex;
+					} else {
+						// to keep or not to keep for debugging?
+						serviceData.setService(null);
+						req.setAttribute("DBusConnection_was_reset", Boolean.TRUE);
+						// TCO, please
+						return getServiceData(servicename, req);
+					}
 				}
 			} else {
-				// org.slf4j.LoggerFactory.getLogger(getClass()).info("cache hit");
+				log.trace("cache hit");
 			}
 
 			return ResponseEntity.ok() //
