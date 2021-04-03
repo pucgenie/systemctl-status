@@ -6,8 +6,6 @@ import java.util.WeakHashMap;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.freedesktop.dbus.DBusConnection;
-import org.freedesktop.dbus.Variant;
 import org.freedesktop.dbus.exceptions.DBusException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpEntity;
@@ -18,16 +16,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 
 import de.thjom.java.systemd.Service;
 import de.thjom.java.systemd.Systemd;
-import de.thjom.java.systemd.Unit;
 import de.thjom.java.systemd.Unit.Property;
-import de.thjom.java.systemd.interfaces.ServiceInterface;
-import lombok.NoArgsConstructor;
 
 @org.springframework.web.bind.annotation.RestController
 @RequestMapping(path = "/service")
@@ -79,15 +72,15 @@ public class ServiceAPI {
 		synchronized (cachedStatus) {
 			ServiceData serviceData = cachedStatus.get(servicename);
 			if (serviceData == null) {
-				cachedStatus.put(servicename, serviceData = new ServiceData());
+				cachedStatus.put(servicename,//
+						serviceData = new ServiceData());
 			}
-			
-			final var safeName = servicename + ".service";
 			var service = serviceData.getService();
 			if (service == null) {
-				serviceData.setService(service = Systemd.get().getManager().getService(safeName));
+				final var safeName = servicename + ".service";
+				serviceData.setService(//
+						service = Systemd.get().getManager().getService(safeName));
 			}
-			final var unitProps = service.getUnitProperties();
 			final long now = System.currentTimeMillis();
 			boolean needsRefresh = now >= serviceData.lastRefresh + waitBeforeRefresh.toMillis();
 			if (!needsRefresh && RequestMethod.HEAD.name().equals(req.getMethod()) //
@@ -100,7 +93,7 @@ public class ServiceAPI {
 				// provoke NPE just in case
 				try {
 					serviceData
-							.setSubStatus(unitProps.getString(Property.SUB_STATE));
+							.setSubStatus(service.getUnitProperties().getString(Property.SUB_STATE));
 					serviceData.lastRefresh = now;
 				} catch (RuntimeException dex) {
 					if (Boolean.TRUE.equals(req.getAttribute("DBusConnection_was_reset"))) {
