@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.freedesktop.dbus.exceptions.DBusException;
 import org.springframework.http.CacheControl;
@@ -28,7 +28,7 @@ import de.thjom.java.systemd.Unit.Property;
 @lombok.extern.slf4j.Slf4j
 public class ServiceAPI {
 
-	protected final Duration waitBeforeRefresh = Duration.ofSeconds(20);
+	protected final Duration waitBeforeRefresh = Duration.ofSeconds(5);
 	/**
 	 * String is a good candidate for Hash collections, isn't it?
 	 * Using Weak implementation as a last-resort memory-capping barrier.
@@ -40,12 +40,19 @@ public class ServiceAPI {
 	@JsonIncludeProperties({"subStatus",})
 	public class ServiceData {
 		
+		@lombok.SneakyThrows(DBusException.class)
+		public ServiceData(String servicename) {
+			final var safeName = servicename + ".service";
+			this.setService(//
+						service = Systemd.get().getManager().getService(safeName));
+		}
+
+		protected Service service;
+		
 		//@JsonInclude
 		protected String subStatus;
 		
 		protected long lastRefresh = System.currentTimeMillis() - waitBeforeRefresh.toMillis();
-		
-		protected Service service;
 		
 	}
 	
@@ -70,17 +77,8 @@ public class ServiceAPI {
 			throw new IllegalArgumentException();
 		}
 		synchronized (cachedStatus) {
-			ServiceData serviceData = cachedStatus.get(servicename);
-			if (serviceData == null) {
-				cachedStatus.put(servicename,//
-						serviceData = new ServiceData());
-			}
-			var service = serviceData.getService();
-			if (service == null) {
-				final var safeName = servicename + ".service";
-				serviceData.setService(//
-						service = Systemd.get().getManager().getService(safeName));
-			}
+			final var serviceData = cachedStatus.computeIfAbsent(servicename, ServiceData::new);
+			final var service = serviceData.getService();
 			final long now = System.currentTimeMillis();
 			boolean needsRefresh = now >= serviceData.lastRefresh + waitBeforeRefresh.toMillis();
 			if (!needsRefresh && RequestMethod.HEAD.name().equals(req.getMethod()) //

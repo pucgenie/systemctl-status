@@ -1,12 +1,12 @@
 plugins {
-	id 'org.springframework.boot' version '2.5.0-M2'
-	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'org.springframework.boot' version '3.0.2'
+	id 'io.spring.dependency-management' version '1.1.0'
 	id 'java'
 }
 
 group = 'net.pucgenie.sysinfo'
-version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '11'
+version = '0.0.2-SNAPSHOT'
+sourceCompatibility = '17'
 
 repositories {
 	mavenCentral()
@@ -35,11 +35,11 @@ dependencies {
 	//implementation 'com.github.bdeneuter:dbus-java:2.7'
 	
 	constraints {
-		implementation('com.github.thjomnx:java-systemd:1.1.0') {
+		implementation('com.github.thjomnx:java-systemd:2.1.0') {
 			because 'current version at time of developing this webapp'
 		}
-		compileOnly 'org.projectlombok:lombok:1.18.18'
-		annotationProcessor 'org.projectlombok:lombok:1.18.18'
+		compileOnly 'org.projectlombok:lombok:1.18.26'
+		annotationProcessor 'org.projectlombok:lombok:1.18.26'
 	}
 }
 
